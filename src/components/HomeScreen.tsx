@@ -1,7 +1,9 @@
-import { Flame, Trophy, Target, ChevronRight, Crown } from 'lucide-react';
+import { Flame, Trophy, Target, ChevronRight, Crown, Lock } from 'lucide-react';
 import { Progress } from './ui/progress';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
+import { PaywallScreen } from './PaywallScreen';
+import { useState } from 'react';
 
 interface HomeScreenProps {
   onStartLesson: (lessonId: number) => void;
@@ -9,13 +11,33 @@ interface HomeScreenProps {
 
 const lessons = [
   { id: 1, title: 'ASL Alphabet', description: 'Learn A-Z fingerspelling', progress: 75, locked: false },
-  { id: 2, title: 'Basic Greetings', description: 'Hello, goodbye, thank you', progress: 40, locked: false },
-  { id: 3, title: 'Family Signs', description: 'Mom, dad, sister, brother', progress: 20, locked: false },
+  { id: 2, title: 'Basic Greetings', description: 'Hello, goodbye, thank you', progress: 40, locked: true },
+  { id: 3, title: 'Family Signs', description: 'Mom, dad, sister, brother', progress: 20, locked: true },
   { id: 4, title: 'Common Phrases', description: 'Everyday conversations', progress: 0, locked: true },
   { id: 5, title: 'Numbers 1-100', description: 'Counting in ASL', progress: 0, locked: true },
 ];
 
 export function HomeScreen({ onStartLesson }: HomeScreenProps) {
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+
+  const handleLessonClick = (lesson: any) => {
+    if (lesson.locked && !isPremium) {
+      setShowPaywall(true);
+    } else {
+      onStartLesson(lesson.id);
+    }
+  };
+
+  const handlePaymentComplete = () => {
+    setIsPremium(true);
+    setShowPaywall(false);
+  };
+
+  if (showPaywall) {
+    return <PaywallScreen onClose={() => setShowPaywall(false)} onPaymentComplete={handlePaymentComplete} />;
+  }
+
   return (
     <div className="px-4 py-6 pb-24">
       {/* Header */}
@@ -89,39 +111,44 @@ export function HomeScreen({ onStartLesson }: HomeScreenProps) {
             <Card
               key={lesson.id}
               className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                lesson.locked ? 'opacity-60' : ''
+                lesson.locked && !isPremium ? 'opacity-60' : ''
               }`}
-              onClick={() => !lesson.locked && onStartLesson(lesson.id)}
+              onClick={() => handleLessonClick(lesson)}
             >
               <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
-                  lesson.locked 
+                  lesson.locked && !isPremium
                     ? 'bg-gray-200' 
                     : lesson.progress === 100
                     ? 'bg-gradient-to-br from-green-400 to-green-600'
                     : 'bg-gradient-to-br from-orange-400 to-orange-600'
                 }`}>
                   <span className="text-white text-2xl">
-                    {lesson.locked ? '🔒' : lesson.progress === 100 ? '✓' : '📚'}
+                    {lesson.locked && !isPremium ? '🔒' : lesson.progress === 100 ? '✓' : '📚'}
                   </span>
                 </div>
                 
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-gray-900">{lesson.title}</h3>
-                    {lesson.progress > 0 && !lesson.locked && (
+                    {lesson.progress > 0 && (!lesson.locked || isPremium) && (
                       <Badge variant="secondary" className="bg-orange-100 text-orange-700">
                         {lesson.progress}%
                       </Badge>
                     )}
+                    {lesson.locked && !isPremium && (
+                      <Badge variant="outline" className="border-orange-200 text-orange-600">
+                        Premium
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{lesson.description}</p>
-                  {!lesson.locked && lesson.progress > 0 && (
+                  {(!lesson.locked || isPremium) && lesson.progress > 0 && (
                     <Progress value={lesson.progress} className="h-1.5" />
                   )}
                 </div>
 
-                {!lesson.locked && (
+                {(!lesson.locked || isPremium) && (
                   <ChevronRight className="text-gray-400" size={20} />
                 )}
               </div>
